@@ -1,237 +1,118 @@
-"use client"
+import React, { useState } from "react";
+import { Card, Button, Input, Select, SelectItem, SelectTrigger, SelectValue, SelectContent } from "@/components/ui";
+import Image from "next/image";
+import { Save, X, Edit } from "lucide-react";
+import type { User } from "@/lib/types";
 
-import { useState } from "react"
-import type { User } from "@/lib/types"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { addUser, updateUser } from "@/lib/data"
-import { Plus, Edit, Save, X } from "lucide-react"
-import Image from "next/image"
+// Supón que tus áreas y equipos están definidos así o similar
+const areas = ["RRHH", "IT", "Ventas", "Marketing", "Operaciones"];
+const equipos = ["Equipo 1", "Equipo 2", "Equipo 3", "Equipo 4"];
 
 interface ManageUsersSectionProps {
-  users: User[]
-  onRefreshData: () => Promise<void>
+  users: User[];
+  onAddUser: (user: User) => void;
+  onEditUser: (user: User) => void;
 }
 
-const departments = [
-  "Desarrollo",
-  "Marketing",
-  "Recursos Humanos",
-  "Ventas",
-  "Diseño",
-  "Operaciones",
-  "QA",
-  "Implementación",
-  "Tabla y Parámetros",
-]
+export function ManageUsersSection({ users, onAddUser, onEditUser }: ManageUsersSectionProps) {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState<Partial<User>>({});
+  const [editingUser, setEditingUser] = useState<string | null>(null);
 
-const teams = [
-  "Satélites",
-  "Digital",
-  "Gestión",
-  "Comercial",
-  "UX/UI",
-  "Arquitectura",
-  "QA",
-  "Implementación",
-  "Tabla y Parámetros",
-  "Corporativo",
-  "Contenido",
-  "Reclutamiento",
-]
-
-const areas = ["IT", "Marketing", "RRHH", "Ventas"]
-
-export function ManageUsersSection({ users, onRefreshData }: ManageUsersSectionProps) {
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [editingUser, setEditingUser] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    department: "",
-    team: "",
-    area: "",
-    birthday: "",
-    isAdmin: false,
-  })
-
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+  const handleInputChange = (field: keyof User, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   const handleAddUser = () => {
-    if (!formData.name || !formData.email) return
-
-    addUser({
-      name: formData.name,
-      email: formData.email,
-      department: formData.department,
-      team: formData.team,
-      area: formData.area,
-      avatar: "/placeholder.svg?height=40&width=40",
-      birthday: formData.birthday,
-      isAdmin: formData.isAdmin,
-    })
-
-    setFormData({
-      name: "",
-      email: "",
-      department: "",
-      team: "",
-      area: "",
-      birthday: "",
-      isAdmin: false,
-    })
-    setShowAddForm(false)
-    onRefreshData()
-  }
+    if (formData.name && formData.email && formData.birthday) {
+      // Guardar cumpleaños como string "YYYY-MM-DD"
+      const userToSave = {
+        ...formData,
+        birthday: formData.birthday, // NO convertir a Date
+      } as User;
+      console.log("[DEBUG][ADD USER]", userToSave);
+      onAddUser(userToSave);
+      setShowAddForm(false);
+      setFormData({});
+    }
+  };
 
   const handleEditUser = (user: User) => {
-    setEditingUser(user.id)
+    setEditingUser(user.id);
     setFormData({
-      name: user.name,
-      email: user.email,
-      department: user.department,
-      team: user.team,
-      area: user.area,
-      birthday: user.birthday,
-      isAdmin: user.isAdmin,
-    })
-  }
+      ...user,
+      // Elimina la hora si existe
+      birthday: user.birthday ? user.birthday.slice(0, 10) : "",
+    });
+  };
 
   const handleSaveEdit = () => {
-    if (!editingUser) return
-
-    updateUser(editingUser, {
-      name: formData.name,
-      email: formData.email,
-      department: formData.department,
-      team: formData.team,
-      area: formData.area,
-      birthday: formData.birthday,
-      isAdmin: formData.isAdmin,
-    })
-
-    setEditingUser(null)
-    setFormData({
-      name: "",
-      email: "",
-      department: "",
-      team: "",
-      area: "",
-      birthday: "",
-      isAdmin: false,
-    })
-    onRefreshData()
-  }
+    if (editingUser && formData.name && formData.email && formData.birthday) {
+      const userToSave = {
+        ...formData,
+        birthday: formData.birthday, // NO convertir a Date
+      } as User;
+      console.log("[DEBUG][EDIT USER]", userToSave);
+      onEditUser(userToSave);
+      setEditingUser(null);
+      setFormData({});
+    }
+  };
 
   const handleCancelEdit = () => {
-    setEditingUser(null)
-    setFormData({
-      name: "",
-      email: "",
-      department: "",
-      team: "",
-      area: "",
-      birthday: "",
-      isAdmin: false,
-    })
-  }
+    setEditingUser(null);
+    setFormData({});
+  };
 
   return (
     <div>
-      <div className="mb-6 flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Gestión de Empleados</h3>
-        <Button onClick={() => setShowAddForm(true)} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Agregar Empleado
-        </Button>
-      </div>
-
-      {/* Formulario para agregar usuario */}
+      <Button onClick={() => setShowAddForm(true)}>Agregar usuario</Button>
       {showAddForm && (
-        <Card className="p-6 mb-6">
-          <h4 className="text-md font-semibold mb-4">Agregar Nuevo Empleado</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre completo</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                placeholder="Nombre completo"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                placeholder="email@empresa.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="department">Departamento</Label>
-              <Select value={formData.department} onValueChange={(value) => handleInputChange("department", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="team">Equipo</Label>
-              <Select value={formData.team} onValueChange={(value) => handleInputChange("team", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar equipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teams.map((team) => (
-                    <SelectItem key={team} value={team}>
-                      {team}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="area">Área</Label>
-              <Select value={formData.area} onValueChange={(value) => handleInputChange("area", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar área" />
-                </SelectTrigger>
-                <SelectContent>
-                  {areas.map((area) => (
-                    <SelectItem key={area} value={area}>
-                      {area}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="birthday">Fecha de nacimiento</Label>
-              <Input
-                id="birthday"
-                type="date"
-                value={formData.birthday}
-                onChange={(e) => handleInputChange("birthday", e.target.value)}
-              />
-            </div>
-          </div>
+        <Card className="p-4">
+          <Input
+            value={formData.name || ""}
+            onChange={(e) => handleInputChange("name", e.target.value)}
+            placeholder="Nombre"
+          />
+          <Input
+            value={formData.email || ""}
+            onChange={(e) => handleInputChange("email", e.target.value)}
+            placeholder="Email"
+          />
+          <Select value={formData.area || ""} onValueChange={(value) => handleInputChange("area", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Área" />
+            </SelectTrigger>
+            <SelectContent>
+              {areas.map((area) => (
+                <SelectItem key={area} value={area}>
+                  {area}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={formData.team || ""} onValueChange={(value) => handleInputChange("team", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Equipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {equipos.map((team) => (
+                <SelectItem key={team} value={team}>
+                  {team}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            value={formData.birthday || ""}
+            onChange={(e) => handleInputChange("birthday", e.target.value)}
+          />
           <div className="flex gap-3 mt-4">
-            <Button onClick={handleAddUser} disabled={!formData.name || !formData.email}>
+            <Button onClick={handleAddUser} disabled={!formData.name || !formData.email || !formData.birthday}>
               <Save className="w-4 h-4 mr-2" />
               Guardar
             </Button>
@@ -251,16 +132,16 @@ export function ManageUsersSection({ users, onRefreshData }: ManageUsersSectionP
               // Modo edición
               <div className="space-y-3">
                 <Input
-                  value={formData.name}
+                  value={formData.name || ""}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   placeholder="Nombre"
                 />
                 <Input
-                  value={formData.email}
+                  value={formData.email || ""}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   placeholder="Email"
                 />
-                <Select value={formData.area} onValueChange={(value) => handleInputChange("area", value)}>
+                <Select value={formData.area || ""} onValueChange={(value) => handleInputChange("area", value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Área" />
                   </SelectTrigger>
@@ -272,9 +153,21 @@ export function ManageUsersSection({ users, onRefreshData }: ManageUsersSectionP
                     ))}
                   </SelectContent>
                 </Select>
+                <Select value={formData.team || ""} onValueChange={(value) => handleInputChange("team", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Equipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {equipos.map((team) => (
+                      <SelectItem key={team} value={team}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
                   type="date"
-                  value={formData.birthday}
+                  value={formData.birthday || ""}
                   onChange={(e) => handleInputChange("birthday", e.target.value)}
                 />
                 <div className="flex gap-2">
@@ -325,5 +218,5 @@ export function ManageUsersSection({ users, onRefreshData }: ManageUsersSectionP
         ))}
       </div>
     </div>
-  )
+  );
 }
