@@ -6,30 +6,39 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Función para calcular días hasta cumpleaños (corrige zona horaria y facilita debug)
+// Función para calcular días hasta cumpleaños (usando zona horaria local del usuario)
 export const getDaysUntilBirthday = (birthday: string) => {
   if (!birthday) return null;
 
-  // Parseo seguro "YYYY-MM-DD"
-  const [year, month, day] = birthday.split("-").map(Number);
+  // Parse cumpleaños en formato "YYYY-MM-DD"
+  const [birthYear, birthMonth, birthDay] = birthday.split("-").map(Number);
 
   const today = new Date();
-  const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-  const birthdayThisYearUTC = new Date(Date.UTC(todayUTC.getFullYear(), month - 1, day));
+  // Fecha de hoy (solo año, mes y día, en zona local)
+  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  // Cumpleaños de este año (zona local)
+  const birthdayThisYearLocal = new Date(todayLocal.getFullYear(), birthMonth - 1, birthDay);
 
   let diffDays;
-  if (birthdayThisYearUTC.getTime() === todayUTC.getTime()) {
+  if (birthdayThisYearLocal.getTime() === todayLocal.getTime()) {
     diffDays = 0;
-  } else if (birthdayThisYearUTC < todayUTC) {
-    const birthdayNextYearUTC = new Date(Date.UTC(todayUTC.getFullYear() + 1, month - 1, day));
-    diffDays = Math.round((birthdayNextYearUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24));
+  } else if (birthdayThisYearLocal < todayLocal) {
+    // Si ya pasó, calcula para el próximo año
+    const birthdayNextYearLocal = new Date(todayLocal.getFullYear() + 1, birthMonth - 1, birthDay);
+    diffDays = Math.round((birthdayNextYearLocal.getTime() - todayLocal.getTime()) / (1000 * 60 * 60 * 24));
   } else {
-    diffDays = Math.round((birthdayThisYearUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24));
+    diffDays = Math.round((birthdayThisYearLocal.getTime() - todayLocal.getTime()) / (1000 * 60 * 60 * 24));
   }
-  // LOG de debug
+
+  // LOG para debug
   console.log(
     '[Cumpleaños][DEBUG]',
-    { birthday, today: todayUTC.toISOString(), birthdayThisYearUTC: birthdayThisYearUTC.toISOString(), diffDays }
+    {
+      birthday,
+      today: todayLocal.toLocaleDateString(),
+      birthdayThisYearLocal: birthdayThisYearLocal.toLocaleDateString(),
+      diffDays
+    }
   );
   return diffDays;
 };
