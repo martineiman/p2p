@@ -6,11 +6,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Función para calcular días hasta cumpleaños (corregida para zona horaria y debug)
+// Función para calcular días hasta cumpleaños (corrige zona horaria y facilita debug)
 export const getDaysUntilBirthday = (birthday: string) => {
   if (!birthday) return null;
 
-  // Parse seguro "YYYY-MM-DD"
+  // Parseo seguro "YYYY-MM-DD"
   const [year, month, day] = birthday.split("-").map(Number);
 
   const today = new Date();

@@ -1,10 +1,19 @@
 import React, { useState } from "react";
-import { Card, Button, Input, Select, SelectItem, SelectTrigger, SelectValue, SelectContent } from "@/components/ui";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectContent
+} from "@/components/ui/select";
 import Image from "next/image";
 import { Save, X, Edit } from "lucide-react";
 import type { User } from "@/lib/types";
 
-// Supón que tus áreas y equipos están definidos así o similar
+// Ajusta estas listas según tu organización
 const areas = ["RRHH", "IT", "Ventas", "Marketing", "Operaciones"];
 const equipos = ["Equipo 1", "Equipo 2", "Equipo 3", "Equipo 4"];
 
