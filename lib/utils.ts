@@ -6,19 +6,26 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Función para calcular días hasta cumpleaños
+// Función para calcular días hasta cumpleaños (corregida para comparar solo fechas)
 export const getDaysUntilBirthday = (birthday: string) => {
-  const today = new Date()
-  const currentYear = today.getFullYear()
-  const birthdayThisYear = new Date(currentYear, new Date(birthday).getMonth(), new Date(birthday).getDate())
+  const today = new Date();
+  // Ignorar la hora
+  const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  const birthdayDate = new Date(birthday);
+  // Cumpleaños de este año (sin hora)
+  const birthdayThisYearUTC = new Date(Date.UTC(todayUTC.getFullYear(), birthdayDate.getMonth(), birthdayDate.getDate()));
 
-  if (birthdayThisYear < today) {
-    birthdayThisYear.setFullYear(currentYear + 1)
+  let diffDays;
+  if (birthdayThisYearUTC.getTime() === todayUTC.getTime()) {
+    diffDays = 0; // ¡Hoy es el cumpleaños!
+  } else if (birthdayThisYearUTC < todayUTC) {
+    // Ya pasó este año, calcular para el próximo año
+    const birthdayNextYearUTC = new Date(Date.UTC(todayUTC.getFullYear() + 1, birthdayDate.getMonth(), birthdayDate.getDate()));
+    diffDays = Math.round((birthdayNextYearUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24));
+  } else {
+    diffDays = Math.round((birthdayThisYearUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24));
   }
-
-  const diffTime = birthdayThisYear.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays
+  return diffDays;
 }
 
 // Función para obtener próximos cumpleaños
