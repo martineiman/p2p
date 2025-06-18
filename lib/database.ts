@@ -2,11 +2,9 @@ import { supabase, isSupabaseConfigured } from "./supabase"
 import type { User, Value, Medal } from "./types"
 import { appData, updateUser as updateUserLocal, addComment as addCommentLocal } from "./data"
 
-// Nombres de tablas en inglés:
-// - users
-// - medals
-// - medal_comments
-// - medal_likes
+// Tablas y campos en inglés:
+// users, medals, medal_comments, medal_likes
+// Asumo campos: id, name, email, department, team, area, avatar, birthday, is_admin
 
 export const databaseService = {
   // Obtener todos los usuarios
@@ -83,12 +81,12 @@ export const databaseService = {
     }
   },
 
-  // Obtener valores corporativos (ajusta si tu tabla es otra)
+  // Obtener valores corporativos (si tienes la tabla, ajusta el nombre)
   async getValues(): Promise<Value[]> {
     if (!isSupabaseConfigured()) {
       return appData.values
     }
-    // Ajusta a 'values' si tu tabla es esa, o elimina si no la usas
+    // Ajusta el nombre si tu tabla no es 'values'
     const { data, error } = await supabase!.from("values").select("*").order("name")
     if (error) throw error
     return data
