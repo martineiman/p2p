@@ -39,18 +39,17 @@ export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageU
     }))
   }
 
-  // Nuevo usuario
+  // Nuevo usuario (debe existir antes en auth.users)
   const handleAddUser = async () => {
     setError(null)
-    if (formData.name && formData.email && formData.birthday) {
+    if (formData.name && formData.email && formData.birthday && formData.id) {
       setIsLoading(true)
       try {
-        // Aquí podrías generar un UUID o dejar que Supabase lo genere (idealmente, integrarlo con auth)
-        // Por simplicidad, lo dejamos en blanco y Supabase espera que el usuario ya exista en auth.users
         const userToSave = {
           ...formData,
           is_admin: false,
         } as User
+        // Guardar en base de datos
         const user = await databaseService.createUser(userToSave)
         if (onUserAdded) onUserAdded(user)
         setShowAddForm(false)
@@ -60,6 +59,8 @@ export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageU
       } finally {
         setIsLoading(false)
       }
+    } else {
+      setError("Completa todos los campos requeridos.")
     }
   }
 
@@ -77,9 +78,9 @@ export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageU
     if (editingUser && formData.name && formData.email && formData.birthday) {
       setIsLoading(true)
       try {
-        // Actualizar usuario en Supabase (puedes agregar un método updateUser en databaseService)
-        // Por ahora, solo muestra el flujo
-        if (onUserEdited) onUserEdited(formData as User)
+        // Actualizar usuario en base de datos
+        const updatedUser = await databaseService.updateUser(editingUser, formData)
+        if (onUserEdited) onUserEdited(updatedUser)
         setEditingUser(null)
         setFormData({})
       } catch (e: any) {
@@ -87,6 +88,8 @@ export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageU
       } finally {
         setIsLoading(false)
       }
+    } else {
+      setError("Completa todos los campos requeridos.")
     }
   }
 
@@ -102,6 +105,13 @@ export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageU
       <Button onClick={() => setShowAddForm(true)}>Agregar usuario</Button>
       {showAddForm && (
         <Card className="p-4">
+          {/* El campo ID debe ser el UUID de auth.users, pide el campo o genera uno */}
+          <Input
+            value={formData.id || ""}
+            onChange={(e) => handleInputChange("id", e.target.value)}
+            placeholder="ID (UUID de usuario en auth.users)"
+            required
+          />
           <Input
             value={formData.name || ""}
             onChange={(e) => handleInputChange("name", e.target.value)}
@@ -142,7 +152,7 @@ export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageU
             onChange={(e) => handleInputChange("birthday", e.target.value)}
           />
           <div className="flex gap-3 mt-4">
-            <Button onClick={handleAddUser} disabled={!formData.name || !formData.email || !formData.birthday || isLoading}>
+            <Button onClick={handleAddUser} disabled={!formData.name || !formData.email || !formData.birthday || !formData.id || isLoading}>
               <Save className="w-4 h-4 mr-2" />
               {isLoading ? "Guardando..." : "Guardar"}
             </Button>

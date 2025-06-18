@@ -1,9 +1,9 @@
 import { supabase, isSupabaseConfigured } from "./supabase"
 import type { User, Value, Medal } from "./types"
-import { appData, addUser } from "./data"
+import { appData, addUser as addUserLocal, updateUser as updateUserLocal, addComment as addCommentLocal } from "./data"
 
 export const databaseService = {
-  // Usuarios
+  // Obtener todos los usuarios
   async getUsers(): Promise<User[]> {
     if (!isSupabaseConfigured()) {
       return appData.users
@@ -23,6 +23,7 @@ export const databaseService = {
     }))
   },
 
+  // Obtener un usuario por ID
   async getUserById(id: string): Promise<User | null> {
     if (!isSupabaseConfigured()) {
       return appData.users.find((user) => user.id === id) || null
@@ -42,6 +43,7 @@ export const databaseService = {
     }
   },
 
+  // Crear usuario (requiere que el usuario exista en auth.users)
   async createUser(user: {
     id: string,
     name: string,
@@ -54,7 +56,7 @@ export const databaseService = {
     is_admin?: boolean
   }): Promise<User> {
     if (!isSupabaseConfigured()) {
-      return addUser(user)
+      return addUserLocal(user)
     }
     const { data, error } = await supabase!
       .from("users")
@@ -75,7 +77,32 @@ export const databaseService = {
     }
   },
 
-  // Valores corporativos
+  // Editar usuario
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    if (!isSupabaseConfigured()) {
+      return updateUserLocal(id, updates)
+    }
+    const { data, error } = await supabase!
+      .from("users")
+      .update(updates)
+      .eq("id", id)
+      .select("*")
+      .single()
+    if (error) throw error
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      department: data.department || "",
+      team: data.team || "",
+      area: data.area || "",
+      avatar: data.avatar || "/placeholder.svg?height=40&width=40",
+      birthday: data.birthday || "",
+      isAdmin: data.is_admin,
+    }
+  },
+
+  // Obtener valores corporativos
   async getValues(): Promise<Value[]> {
     if (!isSupabaseConfigured()) {
       return appData.values
@@ -85,7 +112,7 @@ export const databaseService = {
     return data
   },
 
-  // Reconocimientos
+  // Obtener reconocimientos (medallas)
   async getMedals(): Promise<Medal[]> {
     if (!isSupabaseConfigured()) {
       return appData.medals
@@ -139,6 +166,7 @@ export const databaseService = {
     }))
   },
 
+  // Crear reconocimiento (medalla)
   async createMedal(medal: {
     recipient_id: string
     value_name: string
@@ -146,7 +174,6 @@ export const databaseService = {
     is_public: boolean
   }): Promise<Medal> {
     if (!isSupabaseConfigured()) {
-      // Modo desarrollo
       const newMedal: Medal = {
         id: `medal-${Date.now()}`,
         giver: {
@@ -209,7 +236,7 @@ export const databaseService = {
     }
   },
 
-  // Comentarios / felicitaciones en reconocimientos
+  // Agregar comentario a un reconocimiento
   async addComment(medalId: string, message: string): Promise<{
     id: string
     user: string
@@ -217,8 +244,7 @@ export const databaseService = {
     timestamp: string
   }> {
     if (!isSupabaseConfigured()) {
-      // modo local
-      return appData.addComment(medalId, { user: "Usuario Demo", message })
+      return addCommentLocal(medalId, { user: "Usuario Demo", message })
     }
     const {
       data: { user },
@@ -244,10 +270,9 @@ export const databaseService = {
     }
   },
 
-  // Likes en reconocimientos
+  // Like/Unlike en reconocimientos
   async toggleLike(medalId: string): Promise<boolean> {
     if (!isSupabaseConfigured()) {
-      console.log("Like toggled for medal:", medalId)
       return true
     }
     const {
@@ -262,12 +287,10 @@ export const databaseService = {
       .eq("user_id", user.id)
       .single()
     if (existingLike) {
-      // Quitar like
       const { error } = await supabase!.from("medal_likes").delete().eq("id", existingLike.id)
       if (error) throw error
       return false
     } else {
-      // Agregar like
       const { error } = await supabase!.from("medal_likes").insert({
         medal_id: medalId,
         user_id: user.id,
