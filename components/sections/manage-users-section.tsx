@@ -9,15 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const areas = ["IT", "Marketing", "RRHH", "Ventas"]
 const equipos = [
-  "UX/UI",
-  "Arquitectura",
-  "QA",
-  "Implementación",
-  "Tabla y Parámetros",
-  "Corporativo",
-  "Contenido",
-  "Reclutamiento",
+  "UX/UI", "Arquitectura", "QA", "Implementación", "Tabla y Parámetros", "Corporativo", "Contenido", "Reclutamiento"
 ]
+
+// SOLO muestra usuarios cuyo id sea UUID
+function isUUID(id: string) {
+  return /^[0-9a-fA-F-]{36}$/.test(id)
+}
 
 interface ManageUsersSectionProps {
   users: User[]
@@ -37,7 +35,6 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
     }))
   }
 
-  // Editar usuario
   const handleEditUser = (user: User) => {
     setEditingUser(user.id)
     setFormData({
@@ -71,12 +68,15 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
     setError(null)
   }
 
+  // FILTRAR: solo usuarios con id UUID
+  const validUsers = users.filter(user => isUUID(user.id));
+
   return (
     <div>
       {error && <div className="text-red-600 mb-2">{error}</div>}
       {/* Lista de usuarios */}
       <div className="mt-6">
-        {users.map((user) => (
+        {validUsers.map((user) => (
           <Card key={user.id} className="p-4 flex items-center gap-4 mb-2">
             <div>{user.name}</div>
             <div className="text-sm text-gray-500">{user.email}</div>
@@ -88,7 +88,6 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
           </Card>
         ))}
       </div>
-
       {/* Formulario de edición */}
       {editingUser && (
         <Card className="p-4 mt-4">
