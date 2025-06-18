@@ -1,83 +1,104 @@
-import React, { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectContent
-} from "@/components/ui/select";
-import Image from "next/image";
-import { Save, X, Edit } from "lucide-react";
-import type { User } from "@/lib/types";
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Save } from "lucide-react"
+import { User } from "@/lib/types"
+import { databaseService } from "@/lib/database"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// Ajusta estas listas según tu organización
-const areas = ["RRHH", "IT", "Ventas", "Marketing", "Operaciones"];
-const equipos = ["Equipo 1", "Equipo 2", "Equipo 3", "Equipo 4"];
+const areas = ["IT", "Marketing", "RRHH", "Ventas"]
+const equipos = [
+  "UX/UI",
+  "Arquitectura",
+  "QA",
+  "Implementación",
+  "Tabla y Parámetros",
+  "Corporativo",
+  "Contenido",
+  "Reclutamiento",
+]
 
 interface ManageUsersSectionProps {
-  users: User[];
-  onAddUser: (user: User) => void;
-  onEditUser: (user: User) => void;
+  users: User[]
+  onUserAdded?: (user: User) => void
+  onUserEdited?: (user: User) => void
 }
 
-export function ManageUsersSection({ users, onAddUser, onEditUser }: ManageUsersSectionProps) {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState<Partial<User>>({});
-  const [editingUser, setEditingUser] = useState<string | null>(null);
+export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageUsersSectionProps) {
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [formData, setFormData] = useState<Partial<User>>({})
+  const [editingUser, setEditingUser] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleInputChange = (field: keyof User, value: any) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
-    }));
-  };
+    }))
+  }
 
-  const handleAddUser = () => {
+  // Nuevo usuario
+  const handleAddUser = async () => {
+    setError(null)
     if (formData.name && formData.email && formData.birthday) {
-      // Guardar cumpleaños como string "YYYY-MM-DD"
-      const userToSave = {
-        ...formData,
-        birthday: formData.birthday, // NO convertir a Date
-      } as User;
-      console.log("[DEBUG][ADD USER]", userToSave);
-      onAddUser(userToSave);
-      setShowAddForm(false);
-      setFormData({});
+      setIsLoading(true)
+      try {
+        // Aquí podrías generar un UUID o dejar que Supabase lo genere (idealmente, integrarlo con auth)
+        // Por simplicidad, lo dejamos en blanco y Supabase espera que el usuario ya exista en auth.users
+        const userToSave = {
+          ...formData,
+          is_admin: false,
+        } as User
+        const user = await databaseService.createUser(userToSave)
+        if (onUserAdded) onUserAdded(user)
+        setShowAddForm(false)
+        setFormData({})
+      } catch (e: any) {
+        setError(e.message || "Error al agregar usuario")
+      } finally {
+        setIsLoading(false)
+      }
     }
-  };
+  }
 
+  // Editar usuario
   const handleEditUser = (user: User) => {
-    setEditingUser(user.id);
+    setEditingUser(user.id)
     setFormData({
       ...user,
-      // Elimina la hora si existe
       birthday: user.birthday ? user.birthday.slice(0, 10) : "",
-    });
-  };
+    })
+  }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
+    setError(null)
     if (editingUser && formData.name && formData.email && formData.birthday) {
-      const userToSave = {
-        ...formData,
-        birthday: formData.birthday, // NO convertir a Date
-      } as User;
-      console.log("[DEBUG][EDIT USER]", userToSave);
-      onEditUser(userToSave);
-      setEditingUser(null);
-      setFormData({});
+      setIsLoading(true)
+      try {
+        // Actualizar usuario en Supabase (puedes agregar un método updateUser en databaseService)
+        // Por ahora, solo muestra el flujo
+        if (onUserEdited) onUserEdited(formData as User)
+        setEditingUser(null)
+        setFormData({})
+      } catch (e: any) {
+        setError(e.message || "Error al editar usuario")
+      } finally {
+        setIsLoading(false)
+      }
     }
-  };
+  }
 
   const handleCancelEdit = () => {
-    setEditingUser(null);
-    setFormData({});
-  };
+    setEditingUser(null)
+    setFormData({})
+    setError(null)
+  }
 
   return (
     <div>
+      {error && <div className="text-red-600 mb-2">{error}</div>}
       <Button onClick={() => setShowAddForm(true)}>Agregar usuario</Button>
       {showAddForm && (
         <Card className="p-4">
@@ -121,12 +142,11 @@ export function ManageUsersSection({ users, onAddUser, onEditUser }: ManageUsers
             onChange={(e) => handleInputChange("birthday", e.target.value)}
           />
           <div className="flex gap-3 mt-4">
-            <Button onClick={handleAddUser} disabled={!formData.name || !formData.email || !formData.birthday}>
+            <Button onClick={handleAddUser} disabled={!formData.name || !formData.email || !formData.birthday || isLoading}>
               <Save className="w-4 h-4 mr-2" />
-              Guardar
+              {isLoading ? "Guardando..." : "Guardar"}
             </Button>
-            <Button variant="outline" onClick={() => setShowAddForm(false)}>
-              <X className="w-4 h-4 mr-2" />
+            <Button variant="outline" onClick={() => setShowAddForm(false)} disabled={isLoading}>
               Cancelar
             </Button>
           </div>
@@ -134,98 +154,73 @@ export function ManageUsersSection({ users, onAddUser, onEditUser }: ManageUsers
       )}
 
       {/* Lista de usuarios */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="mt-6">
         {users.map((user) => (
-          <Card key={user.id} className="p-4">
-            {editingUser === user.id ? (
-              // Modo edición
-              <div className="space-y-3">
-                <Input
-                  value={formData.name || ""}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="Nombre"
-                />
-                <Input
-                  value={formData.email || ""}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="Email"
-                />
-                <Select value={formData.area || ""} onValueChange={(value) => handleInputChange("area", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Área" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {areas.map((area) => (
-                      <SelectItem key={area} value={area}>
-                        {area}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={formData.team || ""} onValueChange={(value) => handleInputChange("team", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Equipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {equipos.map((team) => (
-                      <SelectItem key={team} value={team}>
-                        {team}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="date"
-                  value={formData.birthday || ""}
-                  onChange={(e) => handleInputChange("birthday", e.target.value)}
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveEdit}>
-                    <Save className="w-3 h-3 mr-1" />
-                    Guardar
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                    <X className="w-3 h-3 mr-1" />
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              // Modo vista
-              <div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden">
-                    <Image
-                      src={user.avatar || "/placeholder.svg?height=40&width=40"}
-                      alt={user.name}
-                      width={40}
-                      height={40}
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm">{user.name}</h4>
-                    <p className="text-xs text-gray-600">
-                      {user.area} - {user.team}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-xs text-gray-500 mb-3">
-                  <div>Email: {user.email}</div>
-                  <div>
-                    Cumpleaños:{" "}
-                    {user.birthday ? new Date(user.birthday).toLocaleDateString("es-ES") : "No especificado"}
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => handleEditUser(user)} className="w-full">
-                  <Edit className="w-3 h-3 mr-1" />
-                  Editar
-                </Button>
-              </div>
-            )}
+          <Card key={user.id} className="p-4 flex items-center gap-4 mb-2">
+            <div>{user.name}</div>
+            <div className="text-sm text-gray-500">{user.email}</div>
+            <div className="ml-auto">
+              <Button variant="outline" onClick={() => handleEditUser(user)}>
+                Editar
+              </Button>
+            </div>
           </Card>
         ))}
       </div>
+
+      {/* Formulario de edición */}
+      {editingUser && (
+        <Card className="p-4 mt-4">
+          <Input
+            value={formData.name || ""}
+            onChange={(e) => handleInputChange("name", e.target.value)}
+            placeholder="Nombre"
+          />
+          <Input
+            value={formData.email || ""}
+            onChange={(e) => handleInputChange("email", e.target.value)}
+            placeholder="Email"
+          />
+          <Select value={formData.area || ""} onValueChange={(value) => handleInputChange("area", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Área" />
+            </SelectTrigger>
+            <SelectContent>
+              {areas.map((area) => (
+                <SelectItem key={area} value={area}>
+                  {area}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={formData.team || ""} onValueChange={(value) => handleInputChange("team", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Equipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {equipos.map((team) => (
+                <SelectItem key={team} value={team}>
+                  {team}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            value={formData.birthday || ""}
+            onChange={(e) => handleInputChange("birthday", e.target.value)}
+          />
+          <div className="flex gap-3 mt-4">
+            <Button onClick={handleSaveEdit} disabled={!formData.name || !formData.email || !formData.birthday || isLoading}>
+              <Save className="w-4 h-4 mr-2" />
+              {isLoading ? "Guardando..." : "Guardar"}
+            </Button>
+            <Button variant="outline" onClick={handleCancelEdit} disabled={isLoading}>
+              Cancelar
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
-  );
+  )
 }

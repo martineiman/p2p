@@ -1,17 +1,14 @@
 import { supabase, isSupabaseConfigured } from "./supabase"
 import type { User, Value, Medal } from "./types"
-import { appData } from "./data"
+import { appData, addUser } from "./data"
 
 export const databaseService = {
   // Usuarios
   async getUsers(): Promise<User[]> {
     if (!isSupabaseConfigured()) {
-      // Modo desarrollo - usar datos estáticos
       return appData.users
     }
-
     const { data, error } = await supabase!.from("users").select("*").order("name")
-
     if (error) throw error
     return data.map((user) => ({
       id: user.id,
@@ -28,12 +25,9 @@ export const databaseService = {
 
   async getUserById(id: string): Promise<User | null> {
     if (!isSupabaseConfigured()) {
-      // Modo desarrollo - buscar en datos estáticos
       return appData.users.find((user) => user.id === id) || null
     }
-
     const { data, error } = await supabase!.from("users").select("*").eq("id", id).single()
-
     if (error) return null
     return {
       id: data.id,
@@ -48,15 +42,45 @@ export const databaseService = {
     }
   },
 
-  // Valores
+  async createUser(user: {
+    id: string,
+    name: string,
+    email: string,
+    department?: string,
+    team?: string,
+    area?: string,
+    avatar?: string,
+    birthday?: string,
+    is_admin?: boolean
+  }): Promise<User> {
+    if (!isSupabaseConfigured()) {
+      return addUser(user)
+    }
+    const { data, error } = await supabase!
+      .from("users")
+      .insert([user])
+      .select("*")
+      .single()
+    if (error) throw error
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      department: data.department || "",
+      team: data.team || "",
+      area: data.area || "",
+      avatar: data.avatar || "/placeholder.svg?height=40&width=40",
+      birthday: data.birthday || "",
+      isAdmin: data.is_admin,
+    }
+  },
+
+  // Valores corporativos
   async getValues(): Promise<Value[]> {
     if (!isSupabaseConfigured()) {
-      // Modo desarrollo - usar datos estáticos
       return appData.values
     }
-
     const { data, error } = await supabase!.from("values").select("*").order("name")
-
     if (error) throw error
     return data
   },
@@ -64,10 +88,8 @@ export const databaseService = {
   // Reconocimientos
   async getMedals(): Promise<Medal[]> {
     if (!isSupabaseConfigured()) {
-      // Modo desarrollo - usar datos estáticos
       return appData.medals
     }
-
     const { data, error } = await supabase!
       .from("medals")
       .select(`
@@ -87,9 +109,7 @@ export const databaseService = {
         )
       `)
       .order("created_at", { ascending: false })
-
     if (error) throw error
-
     return data.map((medal) => ({
       id: medal.id,
       giver: {
@@ -126,7 +146,7 @@ export const databaseService = {
     is_public: boolean
   }): Promise<Medal> {
     if (!isSupabaseConfigured()) {
-      // Modo desarrollo - simular creación de medalla
+      // Modo desarrollo
       const newMedal: Medal = {
         id: `medal-${Date.now()}`,
         giver: {
@@ -143,8 +163,6 @@ export const databaseService = {
         likes: 0,
         comments: [],
       }
-
-      // Agregar a los datos estáticos temporalmente
       appData.medals.unshift(newMedal)
       return newMedal
     }
@@ -166,7 +184,6 @@ export const databaseService = {
         recipient:recipient_id(id, name, email, avatar)
       `)
       .single()
-
     if (error) throw error
 
     return {
@@ -192,31 +209,61 @@ export const databaseService = {
     }
   },
 
-  // Likes
-  async toggleLike(medalId: string): Promise<boolean> {
+  // Comentarios / felicitaciones en reconocimientos
+  async addComment(medalId: string, message: string): Promise<{
+    id: string
+    user: string
+    message: string
+    timestamp: string
+  }> {
     if (!isSupabaseConfigured()) {
-      // Modo desarrollo - simular toggle de like
-      console.log("Like toggled for medal:", medalId)
-      return true
+      // modo local
+      return appData.addComment(medalId, { user: "Usuario Demo", message })
     }
-
     const {
       data: { user },
     } = await supabase!.auth.getUser()
     if (!user) throw new Error("No hay usuario autenticado")
 
-    // Verificar si ya existe el like
+    const { data, error } = await supabase!
+      .from("medal_comments")
+      .insert({
+        medal_id: medalId,
+        user_id: user.id,
+        message,
+      })
+      .select("id, message, created_at, user:user_id(name)")
+      .single()
+    if (error) throw error
+
+    return {
+      id: data.id,
+      user: data.user.name,
+      message: data.message,
+      timestamp: data.created_at,
+    }
+  },
+
+  // Likes en reconocimientos
+  async toggleLike(medalId: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      console.log("Like toggled for medal:", medalId)
+      return true
+    }
+    const {
+      data: { user },
+    } = await supabase!.auth.getUser()
+    if (!user) throw new Error("No hay usuario autenticado")
+
     const { data: existingLike } = await supabase!
       .from("medal_likes")
       .select("id")
       .eq("medal_id", medalId)
       .eq("user_id", user.id)
       .single()
-
     if (existingLike) {
       // Quitar like
       const { error } = await supabase!.from("medal_likes").delete().eq("id", existingLike.id)
-
       if (error) throw error
       return false
     } else {
@@ -225,7 +272,6 @@ export const databaseService = {
         medal_id: medalId,
         user_id: user.id,
       })
-
       if (error) throw error
       return true
     }

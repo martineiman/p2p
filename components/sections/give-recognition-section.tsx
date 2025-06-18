@@ -1,26 +1,19 @@
-"use client"
-
-import type React from "react"
 import { useState } from "react"
-import type { User, Value } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { HelpCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2, HelpCircle } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { User, Value } from "@/lib/types"
+import { databaseService } from "@/lib/database"
 
 interface GiveRecognitionSectionProps {
   users: User[]
   values: Value[]
   currentUser: User
-  onAddMedal: (medal: {
-    recipient_id: string
-    value_name: string
-    message: string
-    is_public: boolean
-  }) => Promise<void>
+  onRecognitionSent?: () => void
   onShowValues: () => void
 }
 
@@ -28,7 +21,7 @@ export function GiveRecognitionSection({
   users,
   values,
   currentUser,
-  onAddMedal,
+  onRecognitionSent,
   onShowValues,
 }: GiveRecognitionSectionProps) {
   const [selectedUser, setSelectedUser] = useState("")
@@ -50,22 +43,21 @@ export function GiveRecognitionSection({
     setSuccess(false)
 
     try {
-      await onAddMedal({
+      await databaseService.createMedal({
         recipient_id: selectedUser,
         value_name: selectedValue,
         message: message.trim(),
         is_public: isPublic,
       })
 
-      // Limpiar formulario
       setSelectedUser("")
       setSelectedValue("")
       setMessage("")
       setSuccess(true)
+      if (onRecognitionSent) onRecognitionSent()
 
-      // Ocultar mensaje de éxito después de 3 segundos
       setTimeout(() => setSuccess(false), 3000)
-    } catch (err) {
+    } catch (err: any) {
       setError("Error al enviar el reconocimiento. Inténtalo de nuevo.")
     } finally {
       setIsSubmitting(false)
@@ -112,9 +104,8 @@ export function GiveRecognitionSection({
               size="sm"
               className="p-0 h-5 w-5 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200"
               onClick={onShowValues}
-              title="Ver información de valores"
             >
-              <HelpCircle className="h-3 w-3" />
+              <HelpCircle className="h-4 w-4" />
             </Button>
           </Label>
           <Select value={selectedValue} onValueChange={setSelectedValue} required>
@@ -122,9 +113,9 @@ export function GiveRecognitionSection({
               <SelectValue placeholder="Selecciona un valor..." />
             </SelectTrigger>
             <SelectContent>
-              {values.map((value) => (
-                <SelectItem key={value.name} value={value.name}>
-                  {value.icon} {value.name} - {value.description}
+              {values.map((val) => (
+                <SelectItem key={val.name} value={val.name}>
+                  {val.icon} {val.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -132,28 +123,26 @@ export function GiveRecognitionSection({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="message">Mensaje de reconocimiento</Label>
+          <Label htmlFor="message">Mensaje</Label>
           <Textarea
             id="message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Describe por qué merece este reconocimiento..."
-            rows={4}
+            placeholder="¿Por qué reconoces a esta persona?"
             required
+            disabled={isSubmitting}
           />
         </div>
 
         <div className="flex items-center space-x-2">
-          <Checkbox id="public" checked={isPublic} onCheckedChange={(checked) => setIsPublic(checked as boolean)} />
-          <Label htmlFor="public" className="text-sm">
-            Hacer público este reconocimiento
-          </Label>
+          <Checkbox id="isPublic" checked={isPublic} onCheckedChange={() => setIsPublic(!isPublic)} />
+          <Label htmlFor="isPublic">¿Reconocimiento público?</Label>
         </div>
 
         <Button
           type="submit"
           className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
-          disabled={isSubmitting || !selectedUser || !selectedValue || !message.trim()}
+          disabled={isSubmitting}
         >
           {isSubmitting ? (
             <>
@@ -161,7 +150,7 @@ export function GiveRecognitionSection({
               Enviando...
             </>
           ) : (
-            "Enviar Reconocimiento"
+            "Enviar reconocimiento"
           )}
         </Button>
       </form>
