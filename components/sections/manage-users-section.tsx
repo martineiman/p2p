@@ -67,7 +67,7 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
     setError(null)
   }
 
-  const validUsers = users.filter(user => isUUID(user.id))
+  const validUsers = users
 
   return (
     <div>
