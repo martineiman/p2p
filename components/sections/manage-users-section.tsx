@@ -7,9 +7,9 @@ import { User } from "@/lib/types"
 import { databaseService } from "@/lib/database"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-const areas = ["IT", "Marketing", "RRHH", "Ventas"]
-const equipos = [
-  "UX/UI", "Arquitectura", "QA", "Implementación", "Tabla y Parámetros", "Corporativo", "Contenido", "Reclutamiento"
+const areas = ["IT", "Marketing", "HR", "Sales"]
+const teams = [
+  "UX/UI", "Architecture", "QA", "Implementation", "Tables & Params", "Corporate", "Content", "Recruiting"
 ]
 
 function isUUID(id: string) {
@@ -52,12 +52,12 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
         setEditingUser(null)
         setFormData({})
       } catch (e: any) {
-        setError(e.message || "Error al editar usuario")
+        setError(e.message || "Error editing user")
       } finally {
         setIsLoading(false)
       }
     } else {
-      setError("Completa todos los campos requeridos.")
+      setError("Fill all required fields.")
     }
   }
 
@@ -79,7 +79,7 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
             <div className="text-sm text-gray-500">{user.email}</div>
             <div className="ml-auto">
               <Button variant="outline" onClick={() => handleEditUser(user)}>
-                Editar
+                Edit
               </Button>
             </div>
           </Card>
@@ -90,11 +90,11 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
           <Input
             value={formData.name || ""}
             onChange={(e) => handleInputChange("name", e.target.value)}
-            placeholder="Nombre"
+            placeholder="Name"
           />
           <Select value={formData.area || ""} onValueChange={(value) => handleInputChange("area", value)}>
             <SelectTrigger>
-              <SelectValue placeholder="Área" />
+              <SelectValue placeholder="Area" />
             </SelectTrigger>
             <SelectContent>
               {areas.map((area) => (
@@ -106,10 +106,10 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
           </Select>
           <Select value={formData.team || ""} onValueChange={(value) => handleInputChange("team", value)}>
             <SelectTrigger>
-              <SelectValue placeholder="Equipo" />
+              <SelectValue placeholder="Team" />
             </SelectTrigger>
             <SelectContent>
-              {equipos.map((team) => (
+              {teams.map((team) => (
                 <SelectItem key={team} value={team}>
                   {team}
                 </SelectItem>
@@ -124,15 +124,15 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
           <Input
             value={formData.department || ""}
             onChange={(e) => handleInputChange("department", e.target.value)}
-            placeholder="Departamento"
+            placeholder="Department"
           />
           <div className="flex gap-3 mt-4">
             <Button onClick={handleSaveEdit} disabled={!formData.name || !formData.birthday || isLoading}>
               <Save className="w-4 h-4 mr-2" />
-              {isLoading ? "Guardando..." : "Guardar"}
+              {isLoading ? "Saving..." : "Save"}
             </Button>
             <Button variant="outline" onClick={handleCancelEdit} disabled={isLoading}>
-              Cancelar
+              Cancel
             </Button>
           </div>
         </Card>
