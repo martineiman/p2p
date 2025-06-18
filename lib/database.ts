@@ -19,7 +19,7 @@ export const databaseService = {
       area: user.area || "",
       avatar: user.avatar || "/placeholder.svg?height=40&width=40",
       birthday: user.birthday || "",
-      isAdmin: user.is_admin,
+      is_admin: user.is_admin,
     }))
   },
 
@@ -39,52 +39,27 @@ export const databaseService = {
       area: data.area || "",
       avatar: data.avatar || "/placeholder.svg?height=40&width=40",
       birthday: data.birthday || "",
-      isAdmin: data.is_admin,
+      is_admin: data.is_admin,
     }
   },
 
-  // Crear usuario (requiere que el usuario exista en auth.users)
-  async createUser(user: {
-    id: string,
-    name: string,
-    email: string,
-    department?: string,
-    team?: string,
-    area?: string,
-    avatar?: string,
-    birthday?: string,
-    is_admin?: boolean
-  }): Promise<User> {
-    if (!isSupabaseConfigured()) {
-      return addUserLocal(user)
-    }
-    const { data, error } = await supabase!
-      .from("users")
-      .insert([user])
-      .select("*")
-      .single()
-    if (error) throw error
-    return {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      department: data.department || "",
-      team: data.team || "",
-      area: data.area || "",
-      avatar: data.avatar || "/placeholder.svg?height=40&width=40",
-      birthday: data.birthday || "",
-      isAdmin: data.is_admin,
-    }
-  },
-
-  // Editar usuario
+  // Editar usuario (solo campos editables)
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
     if (!isSupabaseConfigured()) {
       return updateUserLocal(id, updates)
     }
+    // No envíes isAdmin ni id/email, solo los campos válidos
+    const allowedFields = { ...updates }
+    if ("isAdmin" in allowedFields) {
+      allowedFields.is_admin = (allowedFields as any).isAdmin
+      delete (allowedFields as any).isAdmin
+    }
+    delete (allowedFields as any).id
+    delete (allowedFields as any).email
+
     const { data, error } = await supabase!
       .from("users")
-      .update(updates)
+      .update(allowedFields)
       .eq("id", id)
       .select("*")
       .single()
@@ -98,7 +73,7 @@ export const databaseService = {
       area: data.area || "",
       avatar: data.avatar || "/placeholder.svg?height=40&width=40",
       birthday: data.birthday || "",
-      isAdmin: data.is_admin,
+      is_admin: data.is_admin,
     }
   },
 

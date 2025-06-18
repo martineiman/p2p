@@ -21,14 +21,12 @@ const equipos = [
 
 interface ManageUsersSectionProps {
   users: User[]
-  onUserAdded?: (user: User) => void
   onUserEdited?: (user: User) => void
 }
 
-export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageUsersSectionProps) {
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [formData, setFormData] = useState<Partial<User>>({})
+export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionProps) {
   const [editingUser, setEditingUser] = useState<string | null>(null)
+  const [formData, setFormData] = useState<Partial<User>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -37,31 +35,6 @@ export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageU
       ...prev,
       [field]: value,
     }))
-  }
-
-  // Nuevo usuario (debe existir antes en auth.users)
-  const handleAddUser = async () => {
-    setError(null)
-    if (formData.name && formData.email && formData.birthday && formData.id) {
-      setIsLoading(true)
-      try {
-        const userToSave = {
-          ...formData,
-          is_admin: false,
-        } as User
-        // Guardar en base de datos
-        const user = await databaseService.createUser(userToSave)
-        if (onUserAdded) onUserAdded(user)
-        setShowAddForm(false)
-        setFormData({})
-      } catch (e: any) {
-        setError(e.message || "Error al agregar usuario")
-      } finally {
-        setIsLoading(false)
-      }
-    } else {
-      setError("Completa todos los campos requeridos.")
-    }
   }
 
   // Editar usuario
@@ -78,7 +51,6 @@ export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageU
     if (editingUser && formData.name && formData.email && formData.birthday) {
       setIsLoading(true)
       try {
-        // Actualizar usuario en base de datos
         const updatedUser = await databaseService.updateUser(editingUser, formData)
         if (onUserEdited) onUserEdited(updatedUser)
         setEditingUser(null)
@@ -102,67 +74,6 @@ export function ManageUsersSection({ users, onUserAdded, onUserEdited }: ManageU
   return (
     <div>
       {error && <div className="text-red-600 mb-2">{error}</div>}
-      <Button onClick={() => setShowAddForm(true)}>Agregar usuario</Button>
-      {showAddForm && (
-        <Card className="p-4">
-          {/* El campo ID debe ser el UUID de auth.users, pide el campo o genera uno */}
-          <Input
-            value={formData.id || ""}
-            onChange={(e) => handleInputChange("id", e.target.value)}
-            placeholder="ID (UUID de usuario en auth.users)"
-            required
-          />
-          <Input
-            value={formData.name || ""}
-            onChange={(e) => handleInputChange("name", e.target.value)}
-            placeholder="Nombre"
-          />
-          <Input
-            value={formData.email || ""}
-            onChange={(e) => handleInputChange("email", e.target.value)}
-            placeholder="Email"
-          />
-          <Select value={formData.area || ""} onValueChange={(value) => handleInputChange("area", value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Área" />
-            </SelectTrigger>
-            <SelectContent>
-              {areas.map((area) => (
-                <SelectItem key={area} value={area}>
-                  {area}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={formData.team || ""} onValueChange={(value) => handleInputChange("team", value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Equipo" />
-            </SelectTrigger>
-            <SelectContent>
-              {equipos.map((team) => (
-                <SelectItem key={team} value={team}>
-                  {team}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            type="date"
-            value={formData.birthday || ""}
-            onChange={(e) => handleInputChange("birthday", e.target.value)}
-          />
-          <div className="flex gap-3 mt-4">
-            <Button onClick={handleAddUser} disabled={!formData.name || !formData.email || !formData.birthday || !formData.id || isLoading}>
-              <Save className="w-4 h-4 mr-2" />
-              {isLoading ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button variant="outline" onClick={() => setShowAddForm(false)} disabled={isLoading}>
-              Cancelar
-            </Button>
-          </div>
-        </Card>
-      )}
-
       {/* Lista de usuarios */}
       <div className="mt-6">
         {users.map((user) => (
