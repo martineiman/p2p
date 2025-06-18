@@ -12,7 +12,6 @@ const equipos = [
   "UX/UI", "Arquitectura", "QA", "Implementación", "Tabla y Parámetros", "Corporativo", "Contenido", "Reclutamiento"
 ]
 
-// SOLO muestra usuarios cuyo id sea UUID
 function isUUID(id: string) {
   return /^[0-9a-fA-F-]{36}$/.test(id)
 }
@@ -45,7 +44,7 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
 
   const handleSaveEdit = async () => {
     setError(null)
-    if (editingUser && formData.name && formData.email && formData.birthday) {
+    if (editingUser && formData.name && formData.birthday) {
       setIsLoading(true)
       try {
         const updatedUser = await databaseService.updateUser(editingUser, formData)
@@ -68,13 +67,11 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
     setError(null)
   }
 
-  // FILTRAR: solo usuarios con id UUID
-  const validUsers = users.filter(user => isUUID(user.id));
+  const validUsers = users.filter(user => isUUID(user.id))
 
   return (
     <div>
       {error && <div className="text-red-600 mb-2">{error}</div>}
-      {/* Lista de usuarios */}
       <div className="mt-6">
         {validUsers.map((user) => (
           <Card key={user.id} className="p-4 flex items-center gap-4 mb-2">
@@ -88,18 +85,12 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
           </Card>
         ))}
       </div>
-      {/* Formulario de edición */}
       {editingUser && (
         <Card className="p-4 mt-4">
           <Input
             value={formData.name || ""}
             onChange={(e) => handleInputChange("name", e.target.value)}
             placeholder="Nombre"
-          />
-          <Input
-            value={formData.email || ""}
-            onChange={(e) => handleInputChange("email", e.target.value)}
-            placeholder="Email"
           />
           <Select value={formData.area || ""} onValueChange={(value) => handleInputChange("area", value)}>
             <SelectTrigger>
@@ -130,8 +121,13 @@ export function ManageUsersSection({ users, onUserEdited }: ManageUsersSectionPr
             value={formData.birthday || ""}
             onChange={(e) => handleInputChange("birthday", e.target.value)}
           />
+          <Input
+            value={formData.department || ""}
+            onChange={(e) => handleInputChange("department", e.target.value)}
+            placeholder="Departamento"
+          />
           <div className="flex gap-3 mt-4">
-            <Button onClick={handleSaveEdit} disabled={!formData.name || !formData.email || !formData.birthday || isLoading}>
+            <Button onClick={handleSaveEdit} disabled={!formData.name || !formData.birthday || isLoading}>
               <Save className="w-4 h-4 mr-2" />
               {isLoading ? "Guardando..." : "Guardar"}
             </Button>

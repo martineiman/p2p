@@ -1,6 +1,18 @@
 import { supabase, isSupabaseConfigured } from "./supabase"
 import type { User, Value, Medal } from "./types"
-import { appData, addUser as addUserLocal, updateUser as updateUserLocal, addComment as addCommentLocal } from "./data"
+import { appData, updateUser as updateUserLocal, addComment as addCommentLocal } from "./data"
+
+// IMPORTANTE: Cambia aquí los nombres de TU tabla y columnas en Supabase.
+// Tu tabla es "usuarios", y las columnas principales son:
+// - identificación (UUID)
+// - nombre (texto)
+// - correo electrónico (texto)
+// - departamento (texto)
+// - equipo (texto)
+// - area (texto)
+// - avatar (texto)
+// - cumpleaños (texto o fecha)
+// - es_admin (booleano)
 
 export const databaseService = {
   // Obtener todos los usuarios
@@ -8,18 +20,18 @@ export const databaseService = {
     if (!isSupabaseConfigured()) {
       return appData.users
     }
-    const { data, error } = await supabase!.from("users").select("*").order("name")
+    const { data, error } = await supabase!.from("usuarios").select("*").order("nombre")
     if (error) throw error
-    return data.map((user) => ({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      department: user.department || "",
-      team: user.team || "",
-      area: user.area || "",
-      avatar: user.avatar || "/placeholder.svg?height=40&width=40",
-      birthday: user.birthday || "",
-      is_admin: user.is_admin,
+    return data.map((user: any) => ({
+      id: user["identificación"],
+      name: user["nombre"],
+      email: user["correo electrónico"],
+      department: user["departamento"] || "",
+      team: user["equipo"] || "",
+      area: user["area"] || "",
+      avatar: user["avatar"] || "/placeholder.svg?height=40&width=40",
+      birthday: user["cumpleaños"] || "",
+      is_admin: user["es_admin"] ?? false,
     }))
   },
 
@@ -28,52 +40,54 @@ export const databaseService = {
     if (!isSupabaseConfigured()) {
       return appData.users.find((user) => user.id === id) || null
     }
-    const { data, error } = await supabase!.from("users").select("*").eq("id", id).single()
+    const { data, error } = await supabase!.from("usuarios").select("*").eq("identificación", id).single()
     if (error) return null
     return {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      department: data.department || "",
-      team: data.team || "",
-      area: data.area || "",
-      avatar: data.avatar || "/placeholder.svg?height=40&width=40",
-      birthday: data.birthday || "",
-      is_admin: data.is_admin,
+      id: data["identificación"],
+      name: data["nombre"],
+      email: data["correo electrónico"],
+      department: data["departamento"] || "",
+      team: data["equipo"] || "",
+      area: data["area"] || "",
+      avatar: data["avatar"] || "/placeholder.svg?height=40&width=40",
+      birthday: data["cumpleaños"] || "",
+      is_admin: data["es_admin"] ?? false,
     }
   },
 
-  // Editar usuario (solo campos editables)
+  // Editar usuario
+  // Solo permite editar los campos custom (NO el id ni el email)
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
     if (!isSupabaseConfigured()) {
       return updateUserLocal(id, updates)
     }
-    // No envíes isAdmin ni id/email, solo los campos válidos
-    const allowedFields = { ...updates }
-    if ("isAdmin" in allowedFields) {
-      allowedFields.is_admin = (allowedFields as any).isAdmin
-      delete (allowedFields as any).isAdmin
-    }
-    delete (allowedFields as any).id
-    delete (allowedFields as any).email
+    // Adaptar nombres de campos a los de la base de datos
+    const allowedFields: any = {}
+    if ("name" in updates) allowedFields["nombre"] = updates.name
+    if ("department" in updates) allowedFields["departamento"] = updates.department
+    if ("team" in updates) allowedFields["equipo"] = updates.team
+    if ("area" in updates) allowedFields["area"] = updates.area
+    if ("avatar" in updates) allowedFields["avatar"] = updates.avatar
+    if ("birthday" in updates) allowedFields["cumpleaños"] = updates.birthday
+    if ("is_admin" in updates) allowedFields["es_admin"] = updates.is_admin
 
     const { data, error } = await supabase!
-      .from("users")
+      .from("usuarios")
       .update(allowedFields)
-      .eq("id", id)
+      .eq("identificación", id)
       .select("*")
       .single()
     if (error) throw error
     return {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      department: data.department || "",
-      team: data.team || "",
-      area: data.area || "",
-      avatar: data.avatar || "/placeholder.svg?height=40&width=40",
-      birthday: data.birthday || "",
-      is_admin: data.is_admin,
+      id: data["identificación"],
+      name: data["nombre"],
+      email: data["correo electrónico"],
+      department: data["departamento"] || "",
+      team: data["equipo"] || "",
+      area: data["area"] || "",
+      avatar: data["avatar"] || "/placeholder.svg?height=40&width=40",
+      birthday: data["cumpleaños"] || "",
+      is_admin: data["es_admin"] ?? false,
     }
   },
 
@@ -82,7 +96,7 @@ export const databaseService = {
     if (!isSupabaseConfigured()) {
       return appData.values
     }
-    const { data, error } = await supabase!.from("values").select("*").order("name")
+    const { data, error } = await supabase!.from("valores").select("*").order("nombre")
     if (error) throw error
     return data
   },
@@ -93,80 +107,63 @@ export const databaseService = {
       return appData.medals
     }
     const { data, error } = await supabase!
-      .from("medals")
+      .from("medallas")
       .select(`
         *,
-        giver:giver_id(id, name, email, avatar),
-        recipient:recipient_id(id, name, email, avatar),
-        medal_comments(
+        otorgante:otorgante_id(identificación, nombre, correo\ electrónico, avatar),
+        destinatario:destinatario_id(identificación, nombre, correo\ electrónico, avatar),
+        comentarios_de_medallas(
           id,
-          message,
-          created_at,
-          user:user_id(id, name)
+          mensaje,
+          creado_en,
+          usuario:usuario_id(identificación, nombre)
         ),
-        medal_likes(
+        me_gusta_de_medads(
           id,
-          user_id,
-          created_at
+          usuario_id,
+          creado_en
         )
       `)
-      .order("created_at", { ascending: false })
+      .order("creado_en", { ascending: false })
     if (error) throw error
-    return data.map((medal) => ({
+    return data.map((medal: any) => ({
       id: medal.id,
       giver: {
-        id: medal.giver.id,
-        name: medal.giver.name,
-        email: medal.giver.email,
-        avatar: medal.giver.avatar || "/placeholder.svg?height=40&width=40",
+        id: medal.otorgante?.identificación,
+        name: medal.otorgante?.nombre,
+        email: medal.otorgante?.["correo electrónico"],
+        avatar: medal.otorgante?.avatar || "/placeholder.svg?height=40&width=40",
       },
       recipient: {
-        id: medal.recipient.id,
-        name: medal.recipient.name,
-        email: medal.recipient.email,
-        avatar: medal.recipient.avatar || "/placeholder.svg?height=40&width=40",
+        id: medal.destinatario?.identificación,
+        name: medal.destinatario?.nombre,
+        email: medal.destinatario?.["correo electrónico"],
+        avatar: medal.destinatario?.avatar || "/placeholder.svg?height=40&width=40",
       },
-      value: medal.value_name,
-      message: medal.message,
-      timestamp: medal.created_at,
-      isPublic: medal.is_public,
-      likes: medal.medal_likes?.length || 0,
+      value: medal.nombre_valor,
+      message: medal.mensaje,
+      timestamp: medal.creado_en,
+      isPublic: medal.es_publico,
+      likes: medal.me_gusta_de_medads?.length || 0,
       comments:
-        medal.medal_comments?.map((comment) => ({
+        medal.comentarios_de_medallas?.map((comment: any) => ({
           id: comment.id,
-          user: comment.user.name,
-          message: comment.message,
-          timestamp: comment.created_at,
+          user: comment.usuario.nombre,
+          message: comment.mensaje,
+          timestamp: comment.creado_en,
         })) || [],
     }))
   },
 
-  // Crear reconocimiento (medalla)
+  // Crear reconocimiento (medalla) -- AJUSTAR nombres de columnas según tu base
   async createMedal(medal: {
-    recipient_id: string
-    value_name: string
-    message: string
-    is_public: boolean
+    destinatario_id: string
+    nombre_valor: string
+    mensaje: string
+    es_publico: boolean
   }): Promise<Medal> {
     if (!isSupabaseConfigured()) {
-      const newMedal: Medal = {
-        id: `medal-${Date.now()}`,
-        giver: {
-          id: "dev-user-1",
-          name: "Usuario Demo",
-          email: "demo@empresa.com",
-          avatar: "/placeholder.svg?height=40&width=40",
-        },
-        recipient: appData.users.find((u) => u.id === medal.recipient_id) || appData.users[0],
-        value: medal.value_name,
-        message: medal.message,
-        timestamp: new Date().toISOString(),
-        isPublic: medal.is_public,
-        likes: 0,
-        comments: [],
-      }
-      appData.medals.unshift(newMedal)
-      return newMedal
+      throw new Error("Solo disponible con Supabase configurado")
     }
 
     const {
@@ -175,15 +172,15 @@ export const databaseService = {
     if (!user) throw new Error("No hay usuario autenticado")
 
     const { data, error } = await supabase!
-      .from("medals")
+      .from("medallas")
       .insert({
-        giver_id: user.id,
+        otorgante_id: user.id,
         ...medal,
       })
       .select(`
         *,
-        giver:giver_id(id, name, email, avatar),
-        recipient:recipient_id(id, name, email, avatar)
+        otorgante:otorgante_id(identificación, nombre, correo\ electrónico, avatar),
+        destinatario:destinatario_id(identificación, nombre, correo\ electrónico, avatar)
       `)
       .single()
     if (error) throw error
@@ -191,35 +188,35 @@ export const databaseService = {
     return {
       id: data.id,
       giver: {
-        id: data.giver.id,
-        name: data.giver.name,
-        email: data.giver.email,
-        avatar: data.giver.avatar || "/placeholder.svg?height=40&width=40",
+        id: data.otorgante.identificación,
+        name: data.otorgante.nombre,
+        email: data.otorgante["correo electrónico"],
+        avatar: data.otorgante.avatar || "/placeholder.svg?height=40&width=40",
       },
       recipient: {
-        id: data.recipient.id,
-        name: data.recipient.name,
-        email: data.recipient.email,
-        avatar: data.recipient.avatar || "/placeholder.svg?height=40&width=40",
+        id: data.destinatario.identificación,
+        name: data.destinatario.nombre,
+        email: data.destinatario["correo electrónico"],
+        avatar: data.destinatario.avatar || "/placeholder.svg?height=40&width=40",
       },
-      value: data.value_name,
-      message: data.message,
-      timestamp: data.created_at,
-      isPublic: data.is_public,
+      value: data.nombre_valor,
+      message: data.mensaje,
+      timestamp: data.creado_en,
+      isPublic: data.es_publico,
       likes: 0,
       comments: [],
     }
   },
 
   // Agregar comentario a un reconocimiento
-  async addComment(medalId: string, message: string): Promise<{
+  async addComment(medallaId: string, mensaje: string): Promise<{
     id: string
     user: string
     message: string
     timestamp: string
   }> {
     if (!isSupabaseConfigured()) {
-      return addCommentLocal(medalId, { user: "Usuario Demo", message })
+      return addCommentLocal(medallaId, { user: "Usuario Demo", message: mensaje })
     }
     const {
       data: { user },
@@ -227,26 +224,26 @@ export const databaseService = {
     if (!user) throw new Error("No hay usuario autenticado")
 
     const { data, error } = await supabase!
-      .from("medal_comments")
+      .from("comentarios_de_medallas")
       .insert({
-        medal_id: medalId,
-        user_id: user.id,
-        message,
+        medalla_id: medallaId,
+        usuario_id: user.id,
+        mensaje,
       })
-      .select("id, message, created_at, user:user_id(name)")
+      .select("id, mensaje, creado_en, usuario:usuario_id(nombre)")
       .single()
     if (error) throw error
 
     return {
       id: data.id,
-      user: data.user.name,
-      message: data.message,
-      timestamp: data.created_at,
+      user: data.usuario.nombre,
+      message: data.mensaje,
+      timestamp: data.creado_en,
     }
   },
 
   // Like/Unlike en reconocimientos
-  async toggleLike(medalId: string): Promise<boolean> {
+  async toggleLike(medallaId: string): Promise<boolean> {
     if (!isSupabaseConfigured()) {
       return true
     }
@@ -256,19 +253,19 @@ export const databaseService = {
     if (!user) throw new Error("No hay usuario autenticado")
 
     const { data: existingLike } = await supabase!
-      .from("medal_likes")
+      .from("me_gusta_de_medads")
       .select("id")
-      .eq("medal_id", medalId)
-      .eq("user_id", user.id)
+      .eq("medalla_id", medallaId)
+      .eq("usuario_id", user.id)
       .single()
     if (existingLike) {
-      const { error } = await supabase!.from("medal_likes").delete().eq("id", existingLike.id)
+      const { error } = await supabase!.from("me_gusta_de_medads").delete().eq("id", existingLike.id)
       if (error) throw error
       return false
     } else {
-      const { error } = await supabase!.from("medal_likes").insert({
-        medal_id: medalId,
-        user_id: user.id,
+      const { error } = await supabase!.from("me_gusta_de_medads").insert({
+        medalla_id: medallaId,
+        usuario_id: user.id,
       })
       if (error) throw error
       return true
