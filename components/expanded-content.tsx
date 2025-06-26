@@ -8,7 +8,7 @@ import { ADNSection } from "@/components/sections/adn-section"
 import { AchievementsSection } from "@/components/sections/achievements-section"
 import { PeopleSearchSection } from "@/components/sections/people-search-section"
 import { GiveRecognitionSection } from "@/components/sections/give-recognition-section"
-import { ManageUsersSection } from "@/components/sections/manage-users-section"
+import ManageUsersSection from "@/components/sections/manage-users-section"
 
 interface ExpandedContentProps {
   activeSection: string

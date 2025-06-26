@@ -12,7 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Solo crear cliente si las variables están configuradas
 export const supabase = supabaseUrl && supabaseAnonKey ? createClient<Database>(supabaseUrl, supabaseAnonKey) : null
 
-// Cliente para el servidor
+// Cliente para el servidor (opcional)
 export const createServerClient = () => {
   if (!supabaseUrl || !supabaseAnonKey) {
     return null

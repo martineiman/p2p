@@ -1,25 +1,19 @@
-export interface User {
+export type User = {
   id: string
   name: string
   email: string
-  department: string
-  team: string
   area: string
-  avatar: string
-  birthday: string
-  isAdmin: boolean
-  daysUntil?: number
+  team: string
+  birthday?: string
+  avatar?: string
+  // agrega otros campos si tu tabla de supabase tiene más
 }
 
-export interface Value {
-  name: string
-  color: string
-  icon: string
-  description: string
-  example: string
+export type Value = {
+  //...
 }
 
-export interface Medal {
+export type Medal = {
   id: string
   giver: User
   recipient: User
@@ -28,12 +22,5 @@ export interface Medal {
   timestamp: string
   isPublic: boolean
   likes: number
-  comments: Comment[]
-}
-
-export interface Comment {
-  id: string
-  user: string
-  message: string
-  timestamp: string
+  comments: any[]
 }
