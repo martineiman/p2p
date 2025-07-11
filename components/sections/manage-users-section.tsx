@@ -1,9 +1,16 @@
-"use client";
+"use client"
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import type { User } from "@/lib/types";
 
-export default function ManageUsersSection() {
-  const [users, setUsers] = useState<any[]>([]);
+interface ManageUsersSectionProps {
+  users?: User[]; // Puedes recibirlos pero igual los cargas desde supabase si así lo deseas
+  onRefreshData?: () => Promise<void>;
+}
+
+export default function ManageUsersSection({ users: initialUsers, onRefreshData }: ManageUsersSectionProps) {
+  const [users, setUsers] = useState<User[]>(initialUsers || []);
   const [error, setError] = useState<any>(null);
 
   useEffect(() => {
@@ -15,7 +22,7 @@ export default function ManageUsersSection() {
       setUsers(data || []);
       setError(error);
     });
-  }, []);
+  }, [onRefreshData]);
 
   return (
     <div>
