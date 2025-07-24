@@ -4,9 +4,14 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth/auth-provider"
+import { initializeDatabase } from "@/lib/sqlite"
 
 const inter = Inter({ subsets: ["latin"] })
 
+// Inicializar la base de datos al cargar la aplicación
+if (typeof window === 'undefined') {
+  initializeDatabase()
+}
 export const metadata: Metadata = {
   title: "Sistema P2P - Plataforma de Reconocimientos",
   description: "Plataforma de reconocimientos entre empleados basada en valores corporativos",

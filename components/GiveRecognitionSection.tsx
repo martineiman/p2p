@@ -1,6 +1,5 @@
 "use client"
 import { useState } from "react"
-import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -9,9 +8,7 @@ import { Loader2, HelpCircle } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { User, Value } from "@/lib/types"
-import { v4 as uuidv4 } from "uuid"
 
-console.log("GiveRecognitionSection se ha renderizado") // LOG 1
 
 interface GiveRecognitionSectionProps {
   users: User[]
@@ -36,23 +33,11 @@ export function GiveRecognitionSection({
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
 
-  // LOGS DE DEPURACIÓN DE PROPS Y ESTADO
-  console.log("Prop users:", users)
-  console.log("Prop currentUser:", currentUser)
-
   const availableUsers = users.filter((user) => user.id !== currentUser.id)
 
-  // LOG 2
-  console.log("availableUsers:", availableUsers)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("handleSubmit se ejecutó") // LOG 3
-
-    // LOGS DE FORMULARIO
-    console.log("selectedUser:", selectedUser)
-    console.log("selectedValue:", selectedValue)
-    console.log("message:", message)
 
     if (!selectedUser || !selectedValue || !message.trim()) return
 
@@ -60,21 +45,23 @@ export function GiveRecognitionSection({
     setError("")
     setSuccess(false)
 
-    const dataToSend = {
-      id: uuidv4(),
-      giver_id: currentUser.id,
-      recipient_id: selectedUser,
-      value_name: selectedValue,
-      message: message.trim(),
-      is_public: isPublic,
-      likes: 0,
-    }
-    // LOG 4
-    console.log("Insertando medalla:", dataToSend)
 
     try {
-      const { error } = await supabase.from("medals").insert([dataToSend])
-      if (error) throw error
+      const res = await fetch('/api/medals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient_id: selectedUser,
+          value_name: selectedValue,
+          message: message.trim(),
+          is_public: isPublic
+        })
+      })
+      
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Error al enviar reconocimiento')
+      }
 
       setSelectedUser("")
       setSelectedValue("")
@@ -82,8 +69,8 @@ export function GiveRecognitionSection({
       setSuccess(true)
       if (onRecognitionSent) onRecognitionSent()
       setTimeout(() => setSuccess(false), 3000)
-    } catch (err: any) {
-      setError("Error al enviar el reconocimiento. Inténtalo de nuevo. " + (err?.message ?? ""))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al enviar el reconocimiento")
     } finally {
       setIsSubmitting(false)
     }

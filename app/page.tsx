@@ -1,7 +1,5 @@
 "use client"
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
-import { appData } from "@/lib/data"
 import { GiveRecognitionSection } from "@/components/GiveRecognitionSection"
 import { StatsGrid } from "@/components/stats-grid"
 import { SectionsGrid } from "@/components/sections-grid"
@@ -9,56 +7,66 @@ import { ExpandedContent } from "@/components/expanded-content"
 import { AchievementsSection } from "@/components/sections/achievements-section"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/components/auth/auth-provider"
 import type { User, Value, Medal } from "@/lib/types"
 
 export default function Home() {
+  const { user: currentUser } = useAuth()
   const [activeSection, setActiveSection] = useState<string | null>(null)
   const [viewingUserAchievements, setViewingUserAchievements] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>([])
-  const [values, setValues] = useState<Value[]>(appData.values)
-  const [medals, setMedals] = useState<Medal[]>(appData.medals)
+  const [values, setValues] = useState<Value[]>([])
+  const [medals, setMedals] = useState<Medal[]>([])
   const [loading, setLoading] = useState(true)
   const [showRecognition, setShowRecognition] = useState(false)
-  const currentUser = appData.currentUser
 
-  // Cargar usuarios desde Supabase
-  const loadUsers = async () => {
+  // Cargar datos desde la API
+  const loadData = async () => {
     setLoading(true)
-    const { data, error } = await supabase.from("users").select("*")
-    if (error) {
-      setUsers([])
-    } else {
-      setUsers(data as User[])
+    try {
+      const [usersRes, valuesRes, medalsRes] = await Promise.all([
+        fetch('/api/users'),
+        fetch('/api/values'),
+        fetch('/api/medals')
+      ])
+      
+      const [usersData, valuesData, medalsData] = await Promise.all([
+        usersRes.json(),
+        valuesRes.json(),
+        medalsRes.json()
+      ])
+      
+      setUsers(usersData)
+      setValues(valuesData)
+      setMedals(medalsData)
+    } catch (error) {
+      console.error('Error loading data:', error)
     }
     setLoading(false)
   }
 
-  // Refrescar datos
-  const loadData = async () => {
-    await loadUsers()
-    setValues([...appData.values])
-    setMedals([...appData.medals])
-  }
 
   useEffect(() => {
-    loadData()
-  }, [])
+    if (currentUser) {
+      loadData()
+    }
+  }, [currentUser])
 
-  // Funciones de navegación, logros, etc. Puedes ajustar según tu lógica real:
   const handleAddMedal = async () => {
-    // Puedes implementar lógica si quieres refrescar tras agregar desde otra sección
     await loadData()
   }
+  
   const handleViewAchievements = (user: User) => {
     setViewingUserAchievements(user)
   }
 
-  // Loader mientras carga
-  if (loading) {
+  if (!currentUser || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-orange-500" />
-        <p className="text-gray-600">Cargando datos...</p>
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-orange-500" />
+          <p className="text-gray-600">Cargando datos...</p>
+        </div>
       </div>
     )
   }

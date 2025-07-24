@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { authService } from "@/lib/auth"
 import { Loader2, Eye, EyeOff } from "lucide-react"
 
 interface RegisterFormProps {
@@ -85,19 +84,21 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
     }
 
     try {
-      const { error } = await authService.signUp(formData.email, formData.password, formData.name)
-      if (error) {
-        setError(error.message)
-      } else {
-        // Actualizar perfil con información adicional
-        await authService.updateProfile({
-          name: formData.name,
-          department: formData.department,
-          team: formData.team,
-          area: formData.area,
-          birthday: formData.birthday,
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          name: formData.name
         })
-
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        setError(data.error || 'Error al crear la cuenta')
+      } else {
         router.push("/")
         router.refresh()
       }

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
-import { authService, type AuthUser } from "@/lib/auth"
+import type { AuthUser } from "@/lib/auth-sqlite"
 
 interface AuthContextType {
   user: AuthUser | null
@@ -18,31 +18,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Obtener usuario inicial
-    authService.getCurrentUser().then((user) => {
-      setUser(user)
-      setLoading(false)
-    })
-
-    // Escuchar cambios de autenticación
-    const {
-      data: { subscription },
-    } = authService.onAuthStateChange((user) => {
-      setUser(user)
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
+    // Obtener usuario actual
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        setUser(data.user)
+        setLoading(false)
+      })
+      .catch(() => {
+        setUser(null)
+        setLoading(false)
+      })
   }, [])
 
   const signOut = async () => {
-    await authService.signOut()
+    await fetch('/api/auth/signout', { method: 'POST' })
     setUser(null)
+    window.location.href = '/auth'
   }
 
   const refreshUser = async () => {
-    const user = await authService.getCurrentUser()
-    setUser(user)
+    try {
+      const res = await fetch('/api/auth/me')
+      const data = await res.json()
+      setUser(data.user)
+    } catch (error) {
+      setUser(null)
+    }
   }
 
   return <AuthContext.Provider value={{ user, loading, signOut, refreshUser }}>{children}</AuthContext.Provider>
